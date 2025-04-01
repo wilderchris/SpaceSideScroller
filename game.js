@@ -32,6 +32,230 @@ let shipColor = {
   r: 30,
   g: 150,
   b: 255
+}
+
+class Bullet {
+  constructor(x, y, type, angleOffset = 0) {
+    this.pos = createVector(x, y);
+    this.type = type; // "player" or "enemy"
+    
+    if (type === "player") {
+      this.vel = createVector(10, 0);
+      this.vel.rotate(angleOffset);
+      this.size = 8;
+      this.color = color(30, 200, 255);
+    } else {
+      this.vel = createVector(-6, 0);
+      this.vel.rotate(angleOffset);
+      this.size = 6;
+      this.color = color(255, 100, 100);
+    }
+  }
+  
+  update() {
+    this.pos.add(this.vel);
+  }
+  
+  draw() {
+    push();
+    translate(this.pos.x, this.pos.y);
+    rotate(this.vel.heading());
+    
+    if (this.type === "player") {
+      // Player bullet - energy bolt
+      noStroke();
+      fill(this.color);
+      ellipse(0, 0, this.size * 2, this.size);
+      
+      // Glow
+      fill(255, 255, 255, 150);
+      ellipse(0, 0, this.size, this.size/2);
+      
+      // Trail
+      for (let i = 1; i <= 3; i++) {
+        let alpha = map(i, 1, 3, 150, 0);
+        fill(this.color.levels[0], this.color.levels[1], this.color.levels[2], alpha);
+        ellipse(-i * 5, 0, this.size * 1.5 - i, this.size/2);
+      }
+    } else {
+      // Enemy bullet - red energy ball
+      noStroke();
+      fill(this.color);
+      ellipse(0, 0, this.size, this.size);
+      
+      // Core
+      fill(255, 255, 200);
+      ellipse(0, 0, this.size/2, this.size/2);
+    }
+    
+    pop();
+  }
+  
+  isOffScreen() {
+    return this.pos.x > width + this.size || this.pos.x < -this.size ||
+           this.pos.y > height + this.size || this.pos.y < -this.size;
+  }
+  
+  hits(obj) {
+    let d = dist(this.pos.x, this.pos.y, obj.pos.x, obj.pos.y);
+    return d < (this.size/2 + obj.size/2);
+  }
+}
+
+class Explosion {
+  constructor(x, y, size = 40) {
+    this.pos = createVector(x, y);
+    this.size = size;
+    this.particles = [];
+    this.lifespan = 30;
+    
+    // Create explosion particles
+    for (let i = 0; i < 20; i++) {
+      this.particles.push({
+        pos: createVector(0, 0),
+        vel: p5.Vector.random2D().mult(random(1, 3)),
+        size: random(3, 8),
+        alpha: 255,
+        color: color(
+          random(200, 255),
+          random(100, 200),
+          random(0, 100)
+        )
+      });
+    }
+  }
+  
+  update() {
+    this.lifespan--;
+    
+    // Update particles
+    for (let particle of this.particles) {
+      particle.pos.add(particle.vel);
+      particle.vel.mult(0.95);
+      particle.alpha = map(this.lifespan, 30, 0, 255, 0);
+    }
+  }
+  
+  draw() {
+    push();
+    translate(this.pos.x, this.pos.y);
+    
+    // Draw particles
+    noStroke();
+    for (let particle of this.particles) {
+      let c = particle.color;
+      fill(c.levels[0], c.levels[1], c.levels[2], particle.alpha);
+      ellipse(particle.pos.x, particle.pos.y, particle.size, particle.size);
+    }
+    
+    // Draw shockwave
+    noFill();
+    strokeWeight(2);
+    let waveSize = map(this.lifespan, 30, 0, 0, this.size);
+    let waveAlpha = map(this.lifespan, 30, 0, 255, 0);
+    stroke(255, 255, 200, waveAlpha);
+    ellipse(0, 0, waveSize, waveSize);
+    
+    pop();
+  }
+  
+  isComplete() {
+    return this.lifespan <= 0;
+  }
+}
+
+class PowerUp {
+  constructor(x, y) {
+    this.pos = createVector(x, y);
+    this.vel = createVector(random(-2, -1), random(-0.5, 0.5));
+    this.size = 20;
+    this.rotation = 0;
+    this.rotationSpeed = random(-0.1, 0.1);
+    
+    // Random power-up type
+    const types = ["HEALTH", "RAPID_FIRE", "TRIPLE_SHOT"];
+    this.type = random(types);
+    
+    // Color based on type
+    if (this.type === "HEALTH") {
+      this.color = color(100, 255, 100);
+      this.symbol = "+";
+    } else if (this.type === "RAPID_FIRE") {
+      this.color = color(255, 200, 0);
+      this.symbol = "R";
+    } else {
+      this.color = color(100, 200, 255);
+      this.symbol = "3";
+    }
+  }
+  
+  update() {
+    this.pos.add(this.vel);
+    this.rotation += this.rotationSpeed;
+  }
+  
+  draw() {
+    push();
+    translate(this.pos.x, this.pos.y);
+    rotate(this.rotation);
+    
+    // Power-up body
+    fill(this.color);
+    stroke(255);
+    strokeWeight(2);
+    rect(-this.size/2, -this.size/2, this.size, this.size, 5);
+    
+    // Symbol
+    fill(255);
+    noStroke();
+    textSize(16);
+    textAlign(CENTER, CENTER);
+    text(this.symbol, 0, 0);
+    
+    // Glow
+    noFill();
+    stroke(this.color);
+    strokeWeight(1);
+    let glowSize = this.size + sin(frameCount * 0.1) * 5;
+    rect(-glowSize/2, -glowSize/2, glowSize, glowSize, 10);
+    
+    pop();
+  }
+  
+  isOffScreen() {
+    return this.pos.x < -this.size;
+  }
+}
+
+class Star {
+  constructor() {
+    this.reset();
+    this.pos.x = random(width);
+  }
+  
+  reset() {
+    this.pos = createVector(width + random(20), random(height));
+    this.size = random(1, 3);
+    this.brightness = random(100, 255);
+    this.speed = map(this.size, 1, 3, 1, 3);
+  }
+  
+  update() {
+    this.pos.x -= this.speed;
+    
+    // Twinkle effect
+    this.brightness = 150 + sin(frameCount * 0.1 + this.pos.y) * 50;
+  }
+  
+  draw() {
+    noStroke();
+    fill(this.brightness);
+    ellipse(this.pos.x, this.pos.y, this.size, this.size);
+  }
+  
+  isOffScreen() {
+    return this.pos.x < -this.size;
+  }
 };
 
 function preload() {
@@ -189,6 +413,16 @@ function updateGame() {
     // Remove bullets that are off-screen
     if (bullets[i].isOffScreen()) {
       bullets.splice(i, 1);
+      continue;
+    }
+    
+    // Check collision with boss if in boss mode
+    if (bossMode && boss && bullets[i].type === "player") {
+      if (dist(bullets[i].pos.x, bullets[i].pos.y, boss.pos.x, boss.pos.y) < (bullets[i].size/2 + boss.size/2)) {
+        boss.health -= 1;
+        explosions.push(new Explosion(bullets[i].pos.x, bullets[i].pos.y, 20));
+        bullets.splice(i, 1);
+      }
     }
   }
   
@@ -891,229 +1125,5 @@ class Boss {
     for (let bullet of this.bullets) {
       bullet.draw();
     }
-  }
-}
-
-class Bullet {
-  constructor(x, y, type, angleOffset = 0) {
-    this.pos = createVector(x, y);
-    this.type = type; // "player" or "enemy"
-    
-    if (type === "player") {
-      this.vel = createVector(10, 0);
-      this.vel.rotate(angleOffset);
-      this.size = 8;
-      this.color = color(30, 200, 255);
-    } else {
-      this.vel = createVector(-6, 0);
-      this.vel.rotate(angleOffset);
-      this.size = 6;
-      this.color = color(255, 100, 100);
-    }
-  }
-  
-  update() {
-    this.pos.add(this.vel);
-  }
-  
-  draw() {
-    push();
-    translate(this.pos.x, this.pos.y);
-    rotate(this.vel.heading());
-    
-    if (this.type === "player") {
-      // Player bullet - energy bolt
-      noStroke();
-      fill(this.color);
-      ellipse(0, 0, this.size * 2, this.size);
-      
-      // Glow
-      fill(255, 255, 255, 150);
-      ellipse(0, 0, this.size, this.size/2);
-      
-      // Trail
-      for (let i = 1; i <= 3; i++) {
-        let alpha = map(i, 1, 3, 150, 0);
-        fill(this.color.levels[0], this.color.levels[1], this.color.levels[2], alpha);
-        ellipse(-i * 5, 0, this.size * 1.5 - i, this.size/2);
-      }
-    } else {
-      // Enemy bullet - red energy ball
-      noStroke();
-      fill(this.color);
-      ellipse(0, 0, this.size, this.size);
-      
-      // Core
-      fill(255, 255, 200);
-      ellipse(0, 0, this.size/2, this.size/2);
-    }
-    
-    pop();
-  }
-  
-  isOffScreen() {
-    return this.pos.x > width + this.size || this.pos.x < -this.size ||
-           this.pos.y > height + this.size || this.pos.y < -this.size;
-  }
-  
-  hits(obj) {
-    let d = dist(this.pos.x, this.pos.y, obj.pos.x, obj.pos.y);
-    return d < (this.size/2 + obj.size/2);
-  }
-}
-
-class Explosion {
-  constructor(x, y, size = 40) {
-    this.pos = createVector(x, y);
-    this.size = size;
-    this.particles = [];
-    this.lifespan = 30;
-    
-    // Create explosion particles
-    for (let i = 0; i < 20; i++) {
-      this.particles.push({
-        pos: createVector(0, 0),
-        vel: p5.Vector.random2D().mult(random(1, 3)),
-        size: random(3, 8),
-        alpha: 255,
-        color: color(
-          random(200, 255),
-          random(100, 200),
-          random(0, 100)
-        )
-      });
-    }
-  }
-  
-  update() {
-    this.lifespan--;
-    
-    // Update particles
-    for (let particle of this.particles) {
-      particle.pos.add(particle.vel);
-      particle.vel.mult(0.95);
-      particle.alpha = map(this.lifespan, 30, 0, 255, 0);
-    }
-  }
-  
-  draw() {
-    push();
-    translate(this.pos.x, this.pos.y);
-    
-    // Draw particles
-    noStroke();
-    for (let particle of this.particles) {
-      let c = particle.color;
-      fill(c.levels[0], c.levels[1], c.levels[2], particle.alpha);
-      ellipse(particle.pos.x, particle.pos.y, particle.size, particle.size);
-    }
-    
-    // Draw shockwave
-    noFill();
-    strokeWeight(2);
-    let waveSize = map(this.lifespan, 30, 0, 0, this.size);
-    let waveAlpha = map(this.lifespan, 30, 0, 255, 0);
-    stroke(255, 255, 200, waveAlpha);
-    ellipse(0, 0, waveSize, waveSize);
-    
-    pop();
-  }
-  
-  isComplete() {
-    return this.lifespan <= 0;
-  }
-}
-
-class PowerUp {
-  constructor(x, y) {
-    this.pos = createVector(x, y);
-    this.vel = createVector(random(-2, -1), random(-0.5, 0.5));
-    this.size = 20;
-    this.rotation = 0;
-    this.rotationSpeed = random(-0.1, 0.1);
-    
-    // Random power-up type
-    const types = ["HEALTH", "RAPID_FIRE", "TRIPLE_SHOT"];
-    this.type = random(types);
-    
-    // Color based on type
-    if (this.type === "HEALTH") {
-      this.color = color(100, 255, 100);
-      this.symbol = "+";
-    } else if (this.type === "RAPID_FIRE") {
-      this.color = color(255, 200, 0);
-      this.symbol = "R";
-    } else {
-      this.color = color(100, 200, 255);
-      this.symbol = "3";
-    }
-  }
-  
-  update() {
-    this.pos.add(this.vel);
-    this.rotation += this.rotationSpeed;
-  }
-  
-  draw() {
-    push();
-    translate(this.pos.x, this.pos.y);
-    rotate(this.rotation);
-    
-    // Power-up body
-    fill(this.color);
-    stroke(255);
-    strokeWeight(2);
-    rect(-this.size/2, -this.size/2, this.size, this.size, 5);
-    
-    // Symbol
-    fill(255);
-    noStroke();
-    textSize(16);
-    textAlign(CENTER, CENTER);
-    text(this.symbol, 0, 0);
-    
-    // Glow
-    noFill();
-    stroke(this.color);
-    strokeWeight(1);
-    let glowSize = this.size + sin(frameCount * 0.1) * 5;
-    rect(-glowSize/2, -glowSize/2, glowSize, glowSize, 10);
-    
-    pop();
-  }
-  
-  isOffScreen() {
-    return this.pos.x < -this.size;
-  }
-}
-
-class Star {
-  constructor() {
-    this.reset();
-    this.pos.x = random(width);
-  }
-  
-  reset() {
-    this.pos = createVector(width + random(20), random(height));
-    this.size = random(1, 3);
-    this.brightness = random(100, 255);
-    this.speed = map(this.size, 1, 3, 1, 3);
-  }
-  
-  update() {
-    this.pos.x -= this.speed;
-    
-    // Twinkle effect
-    this.brightness = 150 + sin(frameCount * 0.1 + this.pos.y) * 50;
-  }
-  
-  draw() {
-    noStroke();
-    fill(this.brightness);
-    ellipse(this.pos.x, this.pos.y, this.size, this.size);
-  }
-  
-  isOffScreen() {
-    return this.pos.x < -this.size;
   }
 }
