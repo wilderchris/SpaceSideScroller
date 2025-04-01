@@ -1,0 +1,21 @@
+body {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #121212;
+    overflow: hidden;
+}
+
+#game-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* The p5.js canvas will be styled by p5 itself */
+canvas {
+    box-shadow: 0 0 20px rgba(0, 100, 255, 0.5);
+}
