@@ -1,6 +1,4 @@
 // Space Shooter Game
-// A polished side-scrolling space shooter with custom sprites
-
 let player;
 let enemies = [];
 let bullets = [];
@@ -308,6 +306,12 @@ function setupSounds() {
       // Play boss alert sound
     }
   };
+}
+
+// Detect mobile devices
+function isMobileDevice() {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+         (window.innerWidth <= 800);
 }
 
 function setup() {
