@@ -1,4 +1,5 @@
 // Space Shooter Game
+
 let player;
 let enemies = [];
 let bullets = [];
@@ -315,7 +316,24 @@ function isMobileDevice() {
 }
 
 function setup() {
-  createCanvas(800, 600);
+  // Check if mobile and adjust canvas size accordingly
+  mobileControls = isMobileDevice();
+  
+  // Create canvas and make it responsive
+  let cnv;
+  if (mobileControls) {
+    // On mobile, make the canvas fit the screen width
+    let screenWidth = min(windowWidth, 800);
+    canvasScaleFactor = screenWidth / 800;
+    cnv = createCanvas(screenWidth, 600 * canvasScaleFactor);
+  } else {
+    cnv = createCanvas(800, 600);
+  }
+  
+  // Center canvas
+  let gameContainer = document.getElementById('game-container');
+  cnv.parent(gameContainer);
+  
   textFont(gameFont);
   bgColor = color(10, 5, 20);
   
@@ -330,6 +348,112 @@ function setup() {
   if (localStorage.getItem('highScore')) {
     highScore = parseInt(localStorage.getItem('highScore'));
   }
+  
+  // Set up mobile controls
+  setupMobileControls();
+}
+
+function setupMobileControls() {
+  if (!mobileControls) return;
+  
+  // Get all mobile control buttons
+  const upBtn = document.getElementById('up-btn');
+  const downBtn = document.getElementById('down-btn');
+  const leftBtn = document.getElementById('left-btn');
+  const rightBtn = document.getElementById('right-btn');
+  const fireBtn = document.getElementById('fire-btn');
+  
+  // Touch event handlers - using both mouse and touch events for wider compatibility
+  
+  // Movement buttons - start
+  upBtn.addEventListener('touchstart', () => player.controls.up = true);
+  downBtn.addEventListener('touchstart', () => player.controls.down = true);
+  leftBtn.addEventListener('touchstart', () => player.controls.left = true);
+  rightBtn.addEventListener('touchstart', () => player.controls.right = true);
+  
+  upBtn.addEventListener('mousedown', () => player.controls.up = true);
+  downBtn.addEventListener('mousedown', () => player.controls.down = true);
+  leftBtn.addEventListener('mousedown', () => player.controls.left = true);
+  rightBtn.addEventListener('mousedown', () => player.controls.right = true);
+  
+  // Movement buttons - end
+  upBtn.addEventListener('touchend', () => player.controls.up = false);
+  downBtn.addEventListener('touchend', () => player.controls.down = false);
+  leftBtn.addEventListener('touchend', () => player.controls.left = false);
+  rightBtn.addEventListener('touchend', () => player.controls.right = false);
+  
+  upBtn.addEventListener('mouseup', () => player.controls.up = false);
+  downBtn.addEventListener('mouseup', () => player.controls.down = false);
+  leftBtn.addEventListener('mouseup', () => player.controls.left = false);
+  rightBtn.addEventListener('mouseup', () => player.controls.right = false);
+  
+  // Fire button
+  fireBtn.addEventListener('touchstart', () => player.controls.fire = true);
+  fireBtn.addEventListener('touchend', () => player.controls.fire = false);
+  
+  fireBtn.addEventListener('mousedown', () => player.controls.fire = true);
+  fireBtn.addEventListener('mouseup', () => player.controls.fire = false);
+  
+  // Prevent default touch behavior to avoid scrolling while playing
+  document.addEventListener('touchmove', function(e) {
+    if (gameState === "PLAYING") {
+      e.preventDefault();
+    }
+  }, { passive: false });
+  
+  // Add start button for mobile
+  const startButton = document.createElement('button');
+  startButton.id = 'start-btn';
+  startButton.textContent = 'START GAME';
+  startButton.style.position = 'absolute';
+  startButton.style.top = '50%';
+  startButton.style.left = '50%';
+  startButton.style.transform = 'translate(-50%, -50%)';
+  startButton.style.padding = '15px 30px';
+  startButton.style.fontSize = '24px';
+  startButton.style.backgroundColor = 'rgba(0, 150, 255, 0.7)';
+  startButton.style.border = '3px solid rgba(100, 200, 255, 0.9)';
+  startButton.style.borderRadius = '10px';
+  startButton.style.color = 'white';
+  startButton.style.fontWeight = 'bold';
+  startButton.style.display = 'none';
+  document.body.appendChild(startButton);
+  
+  // Start button functionality
+  startButton.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (gameState === "START") {
+      gameState = "PLAYING";
+      backgroundMusic.loop();
+    } else if (gameState === "GAME_OVER") {
+      resetGame();
+      gameState = "PLAYING";
+      backgroundMusic.loop();
+    }
+    startButton.style.display = 'none';
+  });
+  
+  startButton.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    if (gameState === "START") {
+      gameState = "PLAYING";
+      backgroundMusic.loop();
+    } else if (gameState === "GAME_OVER") {
+      resetGame();
+      gameState = "PLAYING";
+      backgroundMusic.loop();
+    }
+    startButton.style.display = 'none';
+  });
+  
+  // Show/hide start button based on game state
+  setInterval(() => {
+    if ((gameState === "START" || gameState === "GAME_OVER") && mobileControls) {
+      startButton.style.display = 'block';
+    } else {
+      startButton.style.display = 'none';
+    }
+  }, 100);
 }
 
 function draw() {
@@ -349,6 +473,20 @@ function draw() {
   }
 }
 
+// Handle touch events for starting/restarting the game
+function mousePressed() {
+  if (mobileControls) {
+    if (gameState === "START") {
+      gameState = "PLAYING";
+      backgroundMusic.loop();
+    } else if (gameState === "GAME_OVER") {
+      resetGame();
+      gameState = "PLAYING";
+      backgroundMusic.loop();
+    }
+  }
+}
+
 function drawStartScreen() {
   // Update stars for parallax background effect
   updateStars();
@@ -356,20 +494,32 @@ function drawStartScreen() {
   
   fill(255);
   textAlign(CENTER, CENTER);
-  textSize(50);
+  
+  // Adjust text size for mobile
+  let titleSize = mobileControls ? 40 * canvasScaleFactor : 50;
+  let normalTextSize = mobileControls ? 18 * canvasScaleFactor : 20;
+  let instructionsSize = mobileControls ? 20 * canvasScaleFactor : 24;
+  
+  textSize(titleSize);
   text("SPACE SHOOTER", width/2, height/3);
   
-  textSize(20);
+  textSize(normalTextSize);
   text("High Score: " + highScore, width/2, height/2);
   
-  textSize(24);
+  textSize(instructionsSize);
   if (frameCount % 60 < 30) {
-    text("PRESS ENTER TO START", width/2, height * 2/3);
+    if (mobileControls) {
+      text("TAP SCREEN TO START", width/2, height * 2/3);
+    } else {
+      text("PRESS ENTER TO START", width/2, height * 2/3);
+    }
   }
   
   // Draw player ship preview
   push();
   translate(width/2, height * 5/6);
+  let shipScale = mobileControls ? canvasScaleFactor : 1;
+  scale(shipScale);
   player.drawShip();
   pop();
 }
@@ -381,23 +531,33 @@ function drawGameOverScreen() {
   
   fill(255);
   textAlign(CENTER, CENTER);
-  textSize(50);
+  
+  // Adjust text size for mobile
+  let titleSize = mobileControls ? 40 * canvasScaleFactor : 50;
+  let scoreSize = mobileControls ? 24 * canvasScaleFactor : 30;
+  let instructionsSize = mobileControls ? 20 * canvasScaleFactor : 24;
+  
+  textSize(titleSize);
   text("GAME OVER", width/2, height/3);
   
-  textSize(30);
+  textSize(scoreSize);
   text("Score: " + score, width/2, height/2);
   
   if (score > highScore) {
     fill(255, 255, 0);
-    text("NEW HIGH SCORE!", width/2, height/2 + 50);
+    text("NEW HIGH SCORE!", width/2, height/2 + (mobileControls ? 40 * canvasScaleFactor : 50));
   } else {
-    text("High Score: " + highScore, width/2, height/2 + 50);
+    text("High Score: " + highScore, width/2, height/2 + (mobileControls ? 40 * canvasScaleFactor : 50));
   }
   
   fill(255);
-  textSize(24);
+  textSize(instructionsSize);
   if (frameCount % 60 < 30) {
-    text("PRESS ENTER TO RESTART", width/2, height * 2/3);
+    if (mobileControls) {
+      text("TAP SCREEN TO RESTART", width/2, height * 2/3);
+    } else {
+      text("PRESS ENTER TO RESTART", width/2, height * 2/3);
+    }
   }
 }
 
@@ -791,6 +951,12 @@ class Player {
     // Keep player on screen
     this.pos.x = constrain(this.pos.x, this.size/2, width/3);
     this.pos.y = constrain(this.pos.y, this.size/2, height - this.size/2);
+    
+    // Auto-fire on mobile if the fire button is held
+    if (mobileControls && this.controls.fire && this.cooldown <= 0) {
+      this.shoot();
+      this.cooldown = this.fireRate;
+    }
     
     // Handle shooting
     if (this.controls.fire && this.cooldown <= 0) {
