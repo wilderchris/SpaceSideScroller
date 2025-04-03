@@ -321,21 +321,23 @@ function setup() {
   mobileControls = isMobileDevice();
   
   // Create canvas and make it responsive
-  let cnv;
   if (mobileControls) {
     // On mobile, make the canvas fit the screen width
-    let screenWidth = min(windowWidth, 800);
+    let screenWidth = min(windowWidth - 20, 800);
     canvasScaleFactor = screenWidth / 800;
-    cnv = createCanvas(screenWidth, 600 * canvasScaleFactor);
+    canvas = createCanvas(screenWidth, 600 * canvasScaleFactor);
   } else {
-    cnv = createCanvas(800, 600);
+    canvas = createCanvas(800, 600);
   }
   
   // Center canvas
   let gameContainer = document.getElementById('game-container');
-  cnv.parent(gameContainer);
+  canvas.parent(gameContainer);
   
-  textFont(gameFont);
+  // Set font, background and create player
+  if (gameFont) {
+    textFont(gameFont);
+  }
   bgColor = color(10, 5, 20);
   
   player = new Player();
@@ -352,10 +354,16 @@ function setup() {
   
   // Set up mobile controls
   setupMobileControls();
+  
+  // Make sure canvas is visible
+  canvas.style('display', 'block');
 }
 
 function setupMobileControls() {
   if (!mobileControls) return;
+  
+  // Show the mobile controls
+  document.getElementById('mobile-controls').style.display = 'flex';
   
   // Get all mobile control buttons
   const upBtn = document.getElementById('up-btn');
@@ -363,37 +371,68 @@ function setupMobileControls() {
   const leftBtn = document.getElementById('left-btn');
   const rightBtn = document.getElementById('right-btn');
   const fireBtn = document.getElementById('fire-btn');
+  const startBtn = document.getElementById('start-btn');
   
   // Touch event handlers - using both mouse and touch events for wider compatibility
   
   // Movement buttons - start
-  upBtn.addEventListener('touchstart', () => player.controls.up = true);
-  downBtn.addEventListener('touchstart', () => player.controls.down = true);
-  leftBtn.addEventListener('touchstart', () => player.controls.left = true);
-  rightBtn.addEventListener('touchstart', () => player.controls.right = true);
-  
-  upBtn.addEventListener('mousedown', () => player.controls.up = true);
-  downBtn.addEventListener('mousedown', () => player.controls.down = true);
-  leftBtn.addEventListener('mousedown', () => player.controls.left = true);
-  rightBtn.addEventListener('mousedown', () => player.controls.right = true);
+  upBtn.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    player.controls.up = true;
+  });
+  downBtn.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    player.controls.down = true;
+  });
+  leftBtn.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    player.controls.left = true;
+  });
+  rightBtn.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    player.controls.right = true;
+  });
   
   // Movement buttons - end
-  upBtn.addEventListener('touchend', () => player.controls.up = false);
-  downBtn.addEventListener('touchend', () => player.controls.down = false);
-  leftBtn.addEventListener('touchend', () => player.controls.left = false);
-  rightBtn.addEventListener('touchend', () => player.controls.right = false);
-  
-  upBtn.addEventListener('mouseup', () => player.controls.up = false);
-  downBtn.addEventListener('mouseup', () => player.controls.down = false);
-  leftBtn.addEventListener('mouseup', () => player.controls.left = false);
-  rightBtn.addEventListener('mouseup', () => player.controls.right = false);
+  upBtn.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    player.controls.up = false;
+  });
+  downBtn.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    player.controls.down = false;
+  });
+  leftBtn.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    player.controls.left = false;
+  });
+  rightBtn.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    player.controls.right = false;
+  });
   
   // Fire button
-  fireBtn.addEventListener('touchstart', () => player.controls.fire = true);
-  fireBtn.addEventListener('touchend', () => player.controls.fire = false);
+  fireBtn.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    player.controls.fire = true;
+  });
+  fireBtn.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    player.controls.fire = false;
+  });
   
-  fireBtn.addEventListener('mousedown', () => player.controls.fire = true);
-  fireBtn.addEventListener('mouseup', () => player.controls.fire = false);
+  // Start button functionality
+  startBtn.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (gameState === "START") {
+      gameState = "PLAYING";
+      backgroundMusic.loop();
+    } else if (gameState === "GAME_OVER") {
+      resetGame();
+      gameState = "PLAYING";
+      backgroundMusic.loop();
+    }
+  });
   
   // Prevent default touch behavior to avoid scrolling while playing
   document.addEventListener('touchmove', function(e) {
@@ -402,57 +441,12 @@ function setupMobileControls() {
     }
   }, { passive: false });
   
-  // Add start button for mobile
-  const startButton = document.createElement('button');
-  startButton.id = 'start-btn';
-  startButton.textContent = 'START GAME';
-  startButton.style.position = 'absolute';
-  startButton.style.top = '50%';
-  startButton.style.left = '50%';
-  startButton.style.transform = 'translate(-50%, -50%)';
-  startButton.style.padding = '15px 30px';
-  startButton.style.fontSize = '24px';
-  startButton.style.backgroundColor = 'rgba(0, 150, 255, 0.7)';
-  startButton.style.border = '3px solid rgba(100, 200, 255, 0.9)';
-  startButton.style.borderRadius = '10px';
-  startButton.style.color = 'white';
-  startButton.style.fontWeight = 'bold';
-  startButton.style.display = 'none';
-  document.body.appendChild(startButton);
-  
-  // Start button functionality
-  startButton.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    if (gameState === "START") {
-      gameState = "PLAYING";
-      backgroundMusic.loop();
-    } else if (gameState === "GAME_OVER") {
-      resetGame();
-      gameState = "PLAYING";
-      backgroundMusic.loop();
-    }
-    startButton.style.display = 'none';
-  });
-  
-  startButton.addEventListener('mousedown', (e) => {
-    e.preventDefault();
-    if (gameState === "START") {
-      gameState = "PLAYING";
-      backgroundMusic.loop();
-    } else if (gameState === "GAME_OVER") {
-      resetGame();
-      gameState = "PLAYING";
-      backgroundMusic.loop();
-    }
-    startButton.style.display = 'none';
-  });
-  
-  // Show/hide start button based on game state
+  // Update start button visibility based on game state
   setInterval(() => {
     if ((gameState === "START" || gameState === "GAME_OVER") && mobileControls) {
-      startButton.style.display = 'block';
+      startBtn.style.display = 'block';
     } else {
-      startButton.style.display = 'none';
+      startBtn.style.display = 'none';
     }
   }, 100);
 }
