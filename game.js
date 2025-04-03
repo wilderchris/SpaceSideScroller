@@ -1,4 +1,5 @@
 // Space Shooter Game
+// A polished side-scrolling space shooter with custom sprites
 
 let player;
 let enemies = [];
